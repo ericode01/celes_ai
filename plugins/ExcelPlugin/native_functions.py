@@ -1,4 +1,5 @@
 import json
+from io import StringIO
 from typing import Annotated
 
 from semantic_kernel.functions import kernel_function
@@ -39,7 +40,7 @@ class ExcelPlugin:
     ) -> Annotated[bool, "True if successfully saved the file. Else False."]:
         try:
             json_data_str = json.dumps(json_data)
-            df = pd.read_json(json_data_str)
+            df = pd.read_json(StringIO(json_data_str))
             df.to_excel(full_file_path)
             return True
         except Exception:

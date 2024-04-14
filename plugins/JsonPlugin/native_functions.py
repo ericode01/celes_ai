@@ -15,7 +15,7 @@ class JsonPlugin:
             json_data: Annotated[
                 list, "The JSON data to query against. Is a list of objects. All objects have the same set of keys."],
             query: Annotated[str, '''The query parameter is a string that specifies the condition(s) for filtering objects from a list of objects. It should be constructed using the objects' key names, comparison operators (`>`, `<`, `>=`, `<=`, `==`, `!=`), logical operators (`&` for AND, `|` for OR, `~` for NOT), and values to compare against. When writing complex expressions, consider the following guidelines:
-1. Keys: Directly reference keys by their names. For names with spaces, special characters, or Python keywords, enclose them in backticks (\` \`). Example: \`Key Name\`.
+1. Keys: Directly reference keys by their names. Always enclose them in backticks (\` \`). Example: \`Key Name\`.
 2. Operators: Utilize comparison operators to evaluate conditions between key values and specified values or other key values. Combine multiple conditions with logical operators to refine your query. Parentheses can be used to group conditions and control the evaluation order.
 3. Values: Incorporate values directly in the expression. String values must be enclosed in quotes. For conditions involving key value comparisons, simply use the key names.
 4. Complex Conditions: For expressions combining multiple conditions, use parentheses to group them logically. This ensures the desired precedence and clarity in conditions that use a mix of logical operators.

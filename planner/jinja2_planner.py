@@ -1,5 +1,7 @@
 import asyncio
+import json
 import re
+from json import JSONDecodeError
 
 from semantic_kernel import Kernel, PromptTemplateConfig
 from semantic_kernel.contents.chat_history import ChatHistory
@@ -34,32 +36,77 @@ class Jinja2Planner:
             self.jinja2_plan_creation_chat_function.invoke(self.kernel, user_input=user_input,
                                                            chat_history=chat_history))
 
-#         answer = '''```Jinja2
-# # {# Step 0: Extract Key Values #}
-# # {% set file_path = "user_specified_file_path.xlsx" %}
-# #
-# # {# Step 1: Load the Excel file to JSON list #}
-# # {% set json_data = ExcelPlugin___ExcelFileToJsonList(file_path) %}
-# #
-# # {# Step 2: Filter the JSON data for people who haven't been sent an email yet #}
-# # {% set recipients_to_email = JsonPlugin___QueryJsonData(json_data, "email sent != 'Yes'") %}
-# #
-# # {# Step 3: Loop through each recipient and send an email #}
-# # {% for recipient in recipients_to_email %}
-# #     {# Send an email to the recipient #}
-# #     {% set email_result = EmailPlugin___SendAnEmail(recipient['Name'], recipient['email address']) %}
-# #
-# #     {# Mark the email as sent in the JSON data #}
-# #     {% set update_result = JsonPlugin___UpsertObjectKeyValueWithConditionInList(json_data, ('email address', recipient['email address']), ('email sent', 'Yes')) %}
-# # {% endfor %}
-# #
-# # {# Step 4: Print the updated JSON data to the console #}
-# # {{ JsonPlugin___PrintJson(json_data) }}
-# # ```'''
+#         answer = '''{
+#   "plan": "{# Step 1: Load the Excel file into a JSON list #}
+# {% set json_data = ExcelPlugin___ExcelFileToJsonList(full_file_path = excel_file_path_from_user_input) %}
+# {# Step 2: Filter the JSON data for rows where Status is not 'Email sent' #}
+# {% set recipients_to_email = JsonPlugin___QueryJsonData(json_data = json_data, query = \\"`Status` != 'Email sent'\\") %}
+# {# Step 3: Send an email to each recipient and mark Status as 'Email sent' #}
+# {% for recipient in recipients_to_email %}
+#     {% set email_sent = EmailPlugin___SendAnEmail(recipient_name = recipient['Creator name'], recipient_email = recipient['Email']) %}
+#     {% if email_sent %}
+#         {% set update_status = JsonPlugin___UpsertObjectKeyValueWithConditionInList(json_data = json_data, key_value_pair_to_check = ('Email', recipient['Email']), key_value_pair_to_upsert = ('Status', 'Email sent')) %}
+#     {% endif %}
+# {% endfor %}
+# {# Step 4: Print the updated JSON data to the console #}
+# {{ JsonPlugin___PrintJson(json_data = json_data) }}
+# {# Step 5: Save the updated JSON data back to an Excel file #}
+# {% set save_result = ExcelPlugin___JsonListToExcelFile(json_data = json_data, full_file_path = updated_excel_file_path_from_user_input) %}",
+#   "user_inputs": [
+#     {
+#       "variable_name": "excel_file_path_from_user_input",
+#       "human_friendly_name": "Excel file path",
+#       "description": "Please specify the full path to the Excel file."
+#     },
+#     {
+#       "variable_name": "updated_excel_file_path_from_user_input",
+#       "human_friendly_name": "Updated Excel file path",
+#       "description": "Please specify the full path where the updated Excel file should be saved."
+#     }
+#   ]
+# }'''
+
+        # answer = '''{"plan": "{# Step 1: Load the Excel file into a JSON list #}  {% set people_list = ExcelPlugin___ExcelFileToJsonList(full_file_path = excel_file_full_path_from_user_input) %}    {# Step 2: Filter the list for people who haven't been sent an email yet #}  {% set unsent_emails = JsonPlugin___QueryJsonData(json_data = people_list, query = \"`email sent` != 'Yes'\") %}    {# Step 3: Send an email to each person and mark as sent #}  {% for person in unsent_emails %}      {% set email_sent = EmailPlugin___SendAnEmail(recipient_name = person['Name'], recipient_email = person['email address']) %}      {% if email_sent %}          {% set _ = JsonPlugin___UpsertObjectKeyValueWithConditionInList(json_data = people_list, key_value_pair_to_check = ('email address', person['email address']), key_value_pair_to_upsert = ('email sent', 'Yes')) %}      {% endif %}  {% endfor %}    {# Step 4: Print the updated list to the console #}  {{ JsonPlugin___PrintJson(json_data = people_list) }}    {# Step 5: Save the updated list to a new Excel file #}  {% set _ = ExcelPlugin___JsonListToExcelFile(json_data = people_list, full_file_path = updated_excel_file_full_path_from_user_input) %}", "user_inputs": [{"variable_name": "excel_file_full_path_from_user_input","human_friendly_name": "Excel file full path","description": "Please specify the full path to the Excel file."},{"variable_name": "updated_excel_file_full_path_from_user_input","human_friendly_name": "Updated Excel file full path","description": "Please specify the full path for saving the updated Excel file."}]}'''
+
+        #         answer = '''```Jinja2
+        # # {# Step 0: Extract Key Values #}
+        # # {% set file_path = "user_specified_file_path.xlsx" %}
+        # #
+        # # {# Step 1: Load the Excel file to JSON list #}
+        # # {% set json_data = ExcelPlugin___ExcelFileToJsonList(file_path) %}
+        # #
+        # # {# Step 2: Filter the JSON data for people who haven't been sent an email yet #}
+        # # {% set recipients_to_email = JsonPlugin___QueryJsonData(json_data, "email sent != 'Yes'") %}
+        # #
+        # # {# Step 3: Loop through each recipient and send an email #}
+        # # {% for recipient in recipients_to_email %}
+        # #     {# Send an email to the recipient #}
+        # #     {% set email_result = EmailPlugin___SendAnEmail(recipient['Name'], recipient['email address']) %}
+        # #
+        # #     {# Mark the email as sent in the JSON data #}
+        # #     {% set update_result = JsonPlugin___UpsertObjectKeyValueWithConditionInList(json_data, ('email address', recipient['email address']), ('email sent', 'Yes')) %}
+        # # {% endfor %}
+        # #
+        # # {# Step 4: Print the updated JSON data to the console #}
+        # # {{ JsonPlugin___PrintJson(json_data) }}
+        # # ```'''
 
         print(answer)
+        answer_str = str(answer)
 
-        code_snippet = self.search_msg_for_code_snippet(str(answer))
+        try:
+            start = answer_str.index("{")
+            end = answer_str.rindex("}")
+            answer_str = answer_str[start:end + 1]
+            answer_json = json.loads(answer_str, strict=False)
+        except (JSONDecodeError, ValueError) as ex:
+            # TODO: handle exception
+            print(str(ex))
+            return
+
+        # code_snippet = self.search_msg_for_code_snippet(str(answer))
+
+        code_snippet = answer_json["plan"] if "plan" in answer_json else None
 
         if not code_snippet:
             print("Cannot find code snippet from the plan./n" + answer)
@@ -71,7 +118,9 @@ class Jinja2Planner:
         env = Environment()
         ast = env.parse(code_snippet)
 
-        return ast, chat_history
+        user_inputs = answer_json["user_inputs"] if "user_inputs" in answer_json else []
+
+        return ast, user_inputs, chat_history
 
     def search_msg_for_code_snippet(self, msg: str):
         # Regex breakdown:
@@ -101,30 +150,46 @@ Standard Operating Procedure
 
         chat_history.add_system_message('''Instructions
 Explain how to achieve the user's goal using the available functions with a Jinja2 Python template.
-If a Standard Operating Procedure is provided, follow the Standard Operating Procedure.
+If a Standard Operating Procedure is provided, must follow the Standard Operating Procedure.
+If initial inputs are needed from the user, also returns a list of variables to hold these initial inputs. If no initial user input is needed, the list is empty.
+Return a JSON string in format:
+{
+"plan": The generated Jinja2 template that achieves the goal. Is a string,
+"user_inputs": 
+  [
+    {
+      "variable_name": The name of the variable to store the input. Recommended pattern is {something}_from_user_input. For example: "cs_students_file_full_path_from_user_input",
+      "human_friendly_name": A short human-friendly name. For example: "The CS Students file location",
+      "description": A short human-friendly description about the input. For example: "Please specify the location and the file name (with .extension) of the CS students file."
+    },
+  ]
+}
 
 Example
-If the user posed the goal below, you could answer with the following template.''')
+If the user posed the goal below, you could answer with the following JSON.''')
         chat_history.add_user_message('''Goal
-I want you to generate 10 random numbers and send them to another function.''')
-        chat_history.add_assistant_message('''Here's a Jinja2 template that achieves the goal:
-```Jinja2
-{# Step 0: Extract key values #}
-{% set count = 10 %}
-
+I want you to generate some random numbers and send them to another function.''')
+        chat_history.add_assistant_message('''Here's the JSON string response containing a Jinja2 template that achieves the goal and the user inputs needed:
+{"plan": "{# Step 0: Extract key values #}
+{% set count = count_from_user_input %}
 {# Step 1: Loop using the count #}
 {% for seed in range(start = 0, stop = count, step = 1) %}
-
     {# Step 2: Create random number #}
     {% set random_number = Example___Random(seed = seed) %}
-
-    {# Step 3: Call example ProcessNumber function with random number #}
-    {% set result = Example___ProcessNumber(random_number = random_number) %}
-    
-    {# Step 4: Call output_json function to output result #}
+    {# Step 3: Call example ProcessNumber function with the random number #}
+    {% set result = Example___ProcessNumber(random_number = random_number) %}        
+    {# Step 4: Call JsonPlugin___PrintJson function to print the result #}
     {{ JsonPlugin___PrintJson(json_data = result) }}
-{% endfor %}
-```''')
+{% endfor %}",
+"user_inputs": 
+  [
+    {
+      "variable_name": "count_from_user_input",
+      "human_friendly_name": "Random number count"
+      "description": "Please specify how many random numbers to generate."
+    },
+  ]
+}''')
         chat_history.add_system_message('''Now let's try the real thing.''')
 
         # TODO: add complete type details
@@ -209,7 +274,6 @@ Follow these steps to create one Jinja2 template to achieve the goal:
   - Do not nest functions or conditionals inside other functions. This can cause errors in the template.
 6. Output the Result:
   - Once you have completed the necessary steps to reach the goal, if it's necessary to print your result, use the `output_json(value)` function.
-  - Ensure your template and all steps are enclosed in a ``` Jinja2 block.
 
 Remember, the objective is not to use all the functions available, but to use the correct ones to achieve the desired outcome with a clear and concise template.''')
 

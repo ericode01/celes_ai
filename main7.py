@@ -28,12 +28,23 @@ kernel.import_plugin_from_object(JsonPlugin(), "JsonPlugin")
 
 planner = Jinja2Planner(kernel=kernel, service_id=service_id)
 
-goal = "The Excel file has a column email sent to mark we have sent an email to the person or not. Yes means we've sent an email to the person. Otherwise no or no value. Send an email to all the people we have sent the email yet. Names and email addresses are also in the Excel."
-sop = '''1. Load the file from the user-specified location. The file has but not limited to these columns Name, email address, location, titok handle, email sent, other note.
-2. Based on the criteria the user provides, select the ones, send an email to each of them and mark the email sent as Yes for that person.
-3. Print the updated result to the console.'''
-ast, chat_history = planner.create_plan(goal=goal, sop=sop)
+goal = "The Excel file has a column Status to mark we have sent an email to the person or not. Email sent for column Status means we've sent an email to the person. Otherwise no value. Send an email to all the people we haven't sent the email yet. Use the column Creator Name as the recipient name. Recipient email is in the Email column."
+sop = '''1. Load the file from the user-specified location. The file has but not limited to these columns Date, Creator nickname, Creator name, Link, Email, Status, Phone/Whatsapp, Product Name, PID, Affiliate GMV, Items Sold.
+2. Based on the criteria the user provides, select the ones, send an email to each of them and mark the Status as Email sent for that person.
+3. Print the updated result to the console.
+4. Save the updated result to a file.'''
+ast, user_inputs, chat_history = planner.create_plan(goal=goal, sop=sop)
 
-engine = AstExecutionEngine(plan=ast, context={}, semantic_kernel=kernel, service_id=service_id,
+context = {}
+for user_input in user_inputs:
+    if "variable_name" not in user_input or "human_friendly_name" not in user_input or "description" not in user_input:
+        print("Missing elements in user_input object:" + str(user_input))
+        continue
+
+    print(f"System:> {user_input['description']}")
+    user_cmd_input = input(f"{user_input['human_friendly_name']}:")
+    context[user_input['variable_name']] = user_cmd_input
+
+engine = AstExecutionEngine(plan=ast, context=context, semantic_kernel=kernel, service_id=service_id,
                             chat_history=chat_history)
 engine.execute()
