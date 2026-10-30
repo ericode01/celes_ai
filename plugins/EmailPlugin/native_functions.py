@@ -1,5 +1,7 @@
+import os
 from typing import Annotated
 
+from dotenv import load_dotenv
 from semantic_kernel.functions import kernel_function
 
 
@@ -32,14 +34,23 @@ class EmailPlugin:
         import sib_api_v3_sdk
         from sib_api_v3_sdk.rest import ApiException
 
+        # Credentials and sender details come from the .env file (see .env.example).
+        load_dotenv()
+        api_key = os.getenv("BREVO_API_KEY")
+        if not api_key:
+            raise ValueError("BREVO_API_KEY is not set. Add it to your .env file.")
+        sender_name = sender_name or os.getenv("EMAIL_SENDER_NAME")
+        sender_email = sender_email or os.getenv("EMAIL_SENDER_EMAIL")
+        reply_to_name = reply_to_name or os.getenv("EMAIL_REPLY_TO_NAME") or sender_name
+        reply_to_email = reply_to_email or os.getenv("EMAIL_REPLY_TO_EMAIL") or sender_email
+
         configuration = sib_api_v3_sdk.Configuration()
-        configuration.api_key[
-            'api-key'] = 'YOUR_BREVO_API_KEY'
+        configuration.api_key['api-key'] = api_key
 
         api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
         subject = "COLLAB INVITE💌We pay for your samples on TikTok!"
-        sender = {"name": "SevenBox", "email": "rena.sevenbox@gmail.com"}
-        reply_to = {"name": "SevenBox", "email": "rena.sevenbox@gmail.com"}
+        sender = {"name": sender_name, "email": sender_email}
+        reply_to = {"name": reply_to_name, "email": reply_to_email}
         # html_content = "<html><body><h1>This is a test email </h1></body></html>"
         html_content = self.get_html_content_2(name=recipient_name)
         to = [{"email": recipient_email, "name": recipient_name}]
